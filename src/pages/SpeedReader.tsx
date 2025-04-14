@@ -76,23 +76,40 @@ const SpeedReader = () => {
       
       let extractedText = '';
       
-      // Process each chapter/section
-      if (book.spine) {
-        const items = book.spine.items as any[]; // Cast to any[] to access items
-        for (let i = 0; i < items.length; i++) {
-          const section = items[i];
-          if (section && section.href) {
-            const content = await book.load(section.href);
-            // Check if content exists and has text
-            if (content && typeof content === 'string') {
-              extractedText += content + ' ';
-            } else if (content && typeof content === 'object') {
-              // Try to extract text from content object
-              const text = typeof content.textContent === 'string' 
-                ? content.textContent 
-                : '';
-              extractedText += text + ' ';
+      // Process spine items (chapters/sections)
+      const spine = book.spine;
+      if (spine) {
+        // Use the spine object carefully
+        // Access the navigation items using any type to avoid TypeScript errors
+        const spineItems = (spine as any).items || [];
+        
+        for (const item of spineItems) {
+          try {
+            if (item && item.href) {
+              const content = await book.load(item.href);
+              
+              if (typeof content === 'string') {
+                // If content is a string, use it directly
+                extractedText += content + ' ';
+              } else if (content) {
+                // Extract text from content object
+                // Handle different object structures
+                let text = '';
+                
+                if (typeof (content as any).textContent === 'string') {
+                  text = (content as any).textContent;
+                } else if (typeof (content as any).body?.textContent === 'string') {
+                  text = (content as any).body.textContent;
+                } else if (typeof (content as any).documentElement?.textContent === 'string') {
+                  text = (content as any).documentElement.textContent;
+                }
+                
+                extractedText += text + ' ';
+              }
             }
+          } catch (itemError) {
+            console.error('Error processing EPUB section:', itemError);
+            // Continue to next section instead of failing entire book
           }
         }
       }
