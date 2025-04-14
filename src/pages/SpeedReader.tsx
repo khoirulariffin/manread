@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Play, Pause, RotateCcw, Upload, FileText, Book, Image } from "lucide-react";
 import * as PDFJS from 'pdfjs-dist';
 import * as Tesseract from 'tesseract.js';
-import ePub from 'epubjs';
+import { Book as EPub } from 'epubjs';
 
 // Set PDF.js worker path (required for PDF processing)
 const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
@@ -44,7 +44,7 @@ const SpeedReader = () => {
   const extractPdfText = async (file: File): Promise<string> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await PDFJS.getDocument({data: arrayBuffer}).promise;
       let extractedText = '';
       
       // Extract text from each page
@@ -61,7 +61,7 @@ const SpeedReader = () => {
       toast({
         title: "Error processing PDF",
         description: "Could not extract text from the PDF file.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return '';
     }
@@ -71,16 +71,16 @@ const SpeedReader = () => {
   const extractEpubText = async (file: File): Promise<string> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const book = ePub();
+      const book = new EPub();
       await book.open(arrayBuffer);
       
-      const spine = book.spine();
+      const spine = book.spine;
       let extractedText = '';
       
       // Process each chapter/section
       for (const section of spine.items) {
         const html = await book.load(section.href);
-        const text = html.body.textContent || '';
+        const text = html.body?.textContent || '';
         extractedText += text + ' ';
       }
       
@@ -90,7 +90,7 @@ const SpeedReader = () => {
       toast({
         title: "Error processing EPUB",
         description: "Could not extract text from the EPUB file.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return '';
     }
@@ -103,7 +103,7 @@ const SpeedReader = () => {
         file,
         'eng',
         { 
-          logger: info => {
+          logger: (info: any) => {
             if (info.status === 'recognizing text') {
               // Optional: Update progress if needed
             }
@@ -117,7 +117,7 @@ const SpeedReader = () => {
       toast({
         title: "Error processing image",
         description: "Could not extract text from the image file.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return '';
     }
@@ -137,21 +137,21 @@ const SpeedReader = () => {
         setFileType("pdf");
         toast({
           title: "Processing PDF",
-          description: "Extracting text from PDF...",
+          description: "Extracting text from PDF..."
         });
         extractedText = await extractPdfText(file);
       } else if (file.type === "application/epub+zip" || file.name.endsWith('.epub')) {
         setFileType("epub");
         toast({
           title: "Processing EPUB",
-          description: "Extracting text from EPUB...",
+          description: "Extracting text from EPUB..."
         });
         extractedText = await extractEpubText(file);
       } else if (file.type.startsWith("image/")) {
         setFileType("image");
         toast({
           title: "Processing Image",
-          description: "Performing OCR on image...",
+          description: "Performing OCR on image..."
         });
         extractedText = await extractImageText(file);
       } else if (file.type === "text/plain") {
@@ -167,7 +167,7 @@ const SpeedReader = () => {
         toast({
           title: "Unsupported file format",
           description: "Please upload a PDF, EPUB, image, or text file.",
-          variant: "destructive",
+          variant: "destructive"
         });
         setIsProcessing(false);
         return;
@@ -178,13 +178,13 @@ const SpeedReader = () => {
         processText(extractedText);
         toast({
           title: "File processed successfully",
-          description: `${file.name} has been loaded.`,
+          description: `${file.name} has been loaded.`
         });
       } else {
         toast({
           title: "Empty content",
           description: "No text could be extracted from the file.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } catch (error) {
@@ -192,7 +192,7 @@ const SpeedReader = () => {
       toast({
         title: "Error processing file",
         description: "An error occurred while processing the file.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
@@ -349,7 +349,7 @@ const SpeedReader = () => {
           {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
             <div 
-              className="bg-primary h-2.5 rounded-full transition-all duration-300" 
+              className="bg-primary h-2.5 rounded-full transition-all" 
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -388,7 +388,9 @@ const SpeedReader = () => {
           </div>
           <div className="text-center p-2 rounded-md bg-gray-100">
             <p className="text-sm text-gray-500">Current Position</p>
-            <p className="text-xl font-medium">{words.length > 0 ? currentWordIndex + 1 : 0}/{words.length}</p>
+            <p className="text-xl font-medium">
+              {words.length > 0 ? currentWordIndex + 1 : 0}/{words.length}
+            </p>
           </div>
           <div className="text-center p-2 rounded-md bg-gray-100">
             <p className="text-sm text-gray-500">Time Remaining</p>
