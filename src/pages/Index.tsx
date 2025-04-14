@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,11 +10,12 @@ const Index = () => {
         Speed Reading App
       </h1>
       <p className="text-lg text-center text-gray-600 max-w-2xl mb-8">
-        Improve your reading speed and comprehension with our simple and effective speed reading tool.
-        Upload text or paste your content and begin training your reading skills today.
+        Improve your reading speed and comprehension with our simple and
+        effective speed reading tool. Upload text or paste your content and
+        begin training your reading skills today.
       </p>
       <Button asChild size="lg" className="gap-2">
-        <Link to="/speed-reader">
+        <Link to="/manread/speed-reader">
           <BookOpen className="w-5 h-5" />
           Start Speed Reading
         </Link>
