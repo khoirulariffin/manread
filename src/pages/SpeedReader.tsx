@@ -5,7 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
-import { Play, Pause, RotateCcw, Upload } from "lucide-react";
+import { Play, Pause, RotateCcw, Upload, FileText, Book, Image } from "lucide-react";
+import * as PDFJS from 'pdfjs-dist';
+import * as Tesseract from 'tesseract.js';
+import ePub from 'epubjs';
+
+// Set PDF.js worker path (required for PDF processing)
+const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const SpeedReader = () => {
   const [text, setText] = useState<string>("");
@@ -14,6 +21,8 @@ const SpeedReader = () => {
   const [wpm, setWpm] = useState<number>(300);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [fileType, setFileType] = useState<string | null>(null);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,32 +40,163 @@ const SpeedReader = () => {
     setProgress(0);
   };
 
-  // Handle text file upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Extract text from PDF file
+  const extractPdfText = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+      let extractedText = '';
+      
+      // Extract text from each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(' ');
+        extractedText += pageText + ' ';
+      }
+      
+      return extractedText;
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+      toast({
+        title: "Error processing PDF",
+        description: "Could not extract text from the PDF file.",
+        variant: "destructive",
+      });
+      return '';
+    }
+  };
+
+  // Extract text from EPUB file
+  const extractEpubText = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const book = ePub();
+      await book.open(arrayBuffer);
+      
+      const spine = book.spine();
+      let extractedText = '';
+      
+      // Process each chapter/section
+      for (const section of spine.items) {
+        const html = await book.load(section.href);
+        const text = html.body.textContent || '';
+        extractedText += text + ' ';
+      }
+      
+      return extractedText;
+    } catch (error) {
+      console.error('Error extracting EPUB text:', error);
+      toast({
+        title: "Error processing EPUB",
+        description: "Could not extract text from the EPUB file.",
+        variant: "destructive",
+      });
+      return '';
+    }
+  };
+
+  // Extract text from image using OCR
+  const extractImageText = async (file: File): Promise<string> => {
+    try {
+      const { data } = await Tesseract.recognize(
+        file,
+        'eng',
+        { 
+          logger: info => {
+            if (info.status === 'recognizing text') {
+              // Optional: Update progress if needed
+            }
+          }
+        }
+      );
+      
+      return data.text || '';
+    } catch (error) {
+      console.error('Error extracting image text:', error);
+      toast({
+        title: "Error processing image",
+        description: "Could not extract text from the image file.",
+        variant: "destructive",
+      });
+      return '';
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Only accept text files for now
-    if (file.type !== "text/plain") {
+    setIsProcessing(true);
+    let extractedText = '';
+    
+    try {
+      // Determine file type and extract text accordingly
+      if (file.type === "application/pdf") {
+        setFileType("pdf");
+        toast({
+          title: "Processing PDF",
+          description: "Extracting text from PDF...",
+        });
+        extractedText = await extractPdfText(file);
+      } else if (file.type === "application/epub+zip" || file.name.endsWith('.epub')) {
+        setFileType("epub");
+        toast({
+          title: "Processing EPUB",
+          description: "Extracting text from EPUB...",
+        });
+        extractedText = await extractEpubText(file);
+      } else if (file.type.startsWith("image/")) {
+        setFileType("image");
+        toast({
+          title: "Processing Image",
+          description: "Performing OCR on image...",
+        });
+        extractedText = await extractImageText(file);
+      } else if (file.type === "text/plain") {
+        setFileType("text");
+        const reader = new FileReader();
+        extractedText = await new Promise((resolve) => {
+          reader.onload = (event) => {
+            resolve(event.target?.result as string || '');
+          };
+          reader.readAsText(file);
+        });
+      } else {
+        toast({
+          title: "Unsupported file format",
+          description: "Please upload a PDF, EPUB, image, or text file.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (extractedText) {
+        setText(extractedText);
+        processText(extractedText);
+        toast({
+          title: "File processed successfully",
+          description: `${file.name} has been loaded.`,
+        });
+      } else {
+        toast({
+          title: "Empty content",
+          description: "No text could be extracted from the file.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error processing file:', error);
       toast({
-        title: "Unsupported file format",
-        description: "Currently only supporting .txt files",
+        title: "Error processing file",
+        description: "An error occurred while processing the file.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsProcessing(false);
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setText(content);
-      processText(content);
-      toast({
-        title: "File loaded successfully",
-        description: `${file.name} has been processed.`,
-      });
-    };
-    reader.readAsText(file);
   };
 
   // Handle text change in textarea
@@ -131,14 +271,37 @@ const SpeedReader = () => {
           <h2 className="text-xl font-semibold mb-4">1. Upload or Enter Text</h2>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="file" className="mb-2 block">Upload Text File (.txt)</Label>
-              <Input
-                id="file"
-                type="file"
-                accept=".txt"
-                onChange={handleFileUpload}
-                className="cursor-pointer"
-              />
+              <Label htmlFor="file" className="mb-2 block">Upload File (PDF, EPUB, Image, or Text)</Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  id="file"
+                  type="file"
+                  accept=".pdf,.epub,.txt,image/*"
+                  onChange={handleFileUpload}
+                  className="cursor-pointer"
+                  disabled={isProcessing}
+                />
+                {isProcessing && (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span>Processing...</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-1">
+                  <FileText size={14} /> PDF
+                </div>
+                <div className="flex items-center gap-1">
+                  <Book size={14} /> EPUB
+                </div>
+                <div className="flex items-center gap-1">
+                  <Image size={14} /> Image
+                </div>
+                <div className="flex items-center gap-1">
+                  <FileText size={14} /> Text
+                </div>
+              </div>
             </div>
             <div>
               <Label htmlFor="text" className="mb-2 block">Or Enter/Edit Text</Label>
@@ -197,6 +360,7 @@ const SpeedReader = () => {
               onClick={togglePlayPause}
               variant={isPlaying ? "outline" : "default"}
               size="lg"
+              disabled={words.length === 0}
             >
               {isPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
               {isPlaying ? "Pause" : "Start"}
@@ -205,6 +369,7 @@ const SpeedReader = () => {
               onClick={handleReset}
               variant="outline"
               size="lg"
+              disabled={words.length === 0 || currentWordIndex === 0}
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset
