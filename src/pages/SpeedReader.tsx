@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,14 +73,21 @@ const SpeedReader = () => {
       const book = new EPub();
       await book.open(arrayBuffer);
       
-      const spine = book.spine;
       let extractedText = '';
       
       // Process each chapter/section
-      for (const section of spine.items) {
-        const html = await book.load(section.href);
-        const text = html.body?.textContent || '';
-        extractedText += text + ' ';
+      if (book.spine && typeof book.spine.spineItems !== 'undefined') {
+        const spineItems = book.spine.spineItems;
+        for (let i = 0; i < spineItems.length; i++) {
+          const section = spineItems[i];
+          if (section && section.href) {
+            const html = await book.load(section.href);
+            if (html && typeof html === 'object' && 'textContent' in html) {
+              const text = html.textContent || '';
+              extractedText += text + ' ';
+            }
+          }
+        }
       }
       
       return extractedText;
