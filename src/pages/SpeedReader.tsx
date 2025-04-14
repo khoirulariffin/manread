@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,14 +77,20 @@ const SpeedReader = () => {
       let extractedText = '';
       
       // Process each chapter/section
-      if (book.spine && typeof book.spine.spineItems !== 'undefined') {
-        const spineItems = book.spine.spineItems;
-        for (let i = 0; i < spineItems.length; i++) {
-          const section = spineItems[i];
+      if (book.spine) {
+        const items = book.spine.items as any[]; // Cast to any[] to access items
+        for (let i = 0; i < items.length; i++) {
+          const section = items[i];
           if (section && section.href) {
-            const html = await book.load(section.href);
-            if (html && typeof html === 'object' && 'textContent' in html) {
-              const text = html.textContent || '';
+            const content = await book.load(section.href);
+            // Check if content exists and has text
+            if (content && typeof content === 'string') {
+              extractedText += content + ' ';
+            } else if (content && typeof content === 'object') {
+              // Try to extract text from content object
+              const text = typeof content.textContent === 'string' 
+                ? content.textContent 
+                : '';
               extractedText += text + ' ';
             }
           }
