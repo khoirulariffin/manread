@@ -33,41 +33,39 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
   const generateQuestions = async () => {
     setLoading(true);
     try {
-      // For demo purposes, generate simple questions based on the text
-      // In a real application, this would be replaced with an API call to an AI service
-      const sampleQuestions = generateSampleQuestions(text);
-      setQuestions(sampleQuestions);
+      // Generate Indonesian questions based on the text
+      const generatedQuestions = generateIndonesianQuestions(text);
+      setQuestions(generatedQuestions);
     } catch (error) {
       console.error("Error generating questions:", error);
-      toast.error("Failed to generate questions. Please try again.");
+      toast.error("Gagal membuat pertanyaan. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
   };
 
-  const generateSampleQuestions = (text: string): Question[] => {
-    // Simplified question generation for demonstration
-    // Extract some sentences from the text
+  const generateIndonesianQuestions = (text: string): Question[] => {
+    // Simplified question generation in Indonesian
     const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 10).slice(0, 15);
     
     if (sentences.length < 3) {
       return [
         {
           id: 1,
-          text: "Was this text useful to read?",
-          options: ["Yes, very useful", "Somewhat useful", "Not very useful", "Not at all useful"],
+          text: "Apakah teks ini bermanfaat untuk dibaca?",
+          options: ["Ya, sangat bermanfaat", "Cukup bermanfaat", "Tidak terlalu bermanfaat", "Sama sekali tidak bermanfaat"],
           correctAnswer: 0
         },
         {
           id: 2,
-          text: "Would you recommend this text to others?",
-          options: ["Definitely", "Probably", "Probably not", "Definitely not"],
+          text: "Apakah Anda akan merekomendasikan teks ini kepada orang lain?",
+          options: ["Pasti", "Mungkin", "Mungkin tidak", "Pasti tidak"],
           correctAnswer: 0
         },
         {
           id: 3,
-          text: "How well did you understand the text?",
-          options: ["Completely", "Mostly", "Somewhat", "Not at all"],
+          text: "Seberapa baik Anda memahami teks ini?",
+          options: ["Sepenuhnya", "Sebagian besar", "Sebagian", "Tidak sama sekali"],
           correctAnswer: 0
         }
       ];
@@ -87,7 +85,20 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
         
         if (words.length > 0) {
           const keyWord = words[Math.floor(Math.random() * words.length)];
-          const questionText = `Which of the following is mentioned in relation to "${keyWord}"?`;
+          
+          // Create a clearer Indonesian question
+          let questionText = `Apa yang disebutkan dalam teks terkait dengan "${keyWord}"?`;
+          
+          // Alternative question formats for variety
+          const questionFormats = [
+            `Apa yang disebutkan dalam teks terkait dengan "${keyWord}"?`,
+            `Berdasarkan teks, informasi apa yang benar tentang "${keyWord}"?`,
+            `Menurut bacaan, apa yang dijelaskan tentang "${keyWord}"?`,
+            `Dalam teks tersebut, bagaimana "${keyWord}" dijelaskan?`,
+            `Pernyataan mana yang sesuai dengan informasi tentang "${keyWord}" dalam teks?`
+          ];
+          
+          questionText = questionFormats[Math.floor(Math.random() * questionFormats.length)];
           
           // Create options (1 correct, 3 incorrect)
           const correctOption = sentence.trim();
@@ -106,7 +117,13 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
           
           // If we don't have enough incorrect options, add some generic ones
           while (incorrectOptions.length < 3) {
-            incorrectOptions.push(`Option not related to ${keyWord}`);
+            const genericOptions = [
+              `Opsi yang tidak berkaitan dengan ${keyWord}`,
+              `${keyWord} tidak disebutkan dalam teks`,
+              `Informasi tentang ${keyWord} tidak ada dalam bacaan`,
+              `${keyWord} memiliki arti yang berbeda dalam konteks lain`
+            ];
+            incorrectOptions.push(genericOptions[Math.floor(Math.random() * genericOptions.length)]);
           }
           
           // Shuffle options
@@ -124,13 +141,35 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
       }
     }
     
-    // If we couldn't generate enough questions, add some generic ones
+    // If we couldn't generate enough questions, add some generic ones in Indonesian
     while (randomQuestions.length < 5) {
+      const genericQuestions = [
+        {
+          text: `Apa tema utama dari teks ini?`,
+          options: ["Tema A", "Tema B", "Tema C", "Tema D"],
+          correctAnswer: 0
+        },
+        {
+          text: `Berdasarkan teks, kesimpulan apa yang dapat diambil?`,
+          options: ["Kesimpulan A", "Kesimpulan B", "Kesimpulan C", "Kesimpulan D"],
+          correctAnswer: 0
+        },
+        {
+          text: `Apa tujuan penulis dalam menyusun teks ini?`,
+          options: ["Tujuan A", "Tujuan B", "Tujuan C", "Tujuan D"],
+          correctAnswer: 0
+        },
+        {
+          text: `Bagaimana pemahaman Anda tentang teks ini?`,
+          options: ["Sangat baik", "Cukup baik", "Kurang baik", "Tidak paham"],
+          correctAnswer: 0
+        }
+      ];
+      
+      const genericQuestion = genericQuestions[randomQuestions.length % genericQuestions.length];
       randomQuestions.push({
         id: randomQuestions.length + 1,
-        text: `What is your understanding of the text? (Question ${randomQuestions.length + 1})`,
-        options: ["Complete understanding", "Partial understanding", "Limited understanding", "No understanding"],
-        correctAnswer: 0
+        ...genericQuestion
       });
     }
     
@@ -157,14 +196,14 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
     setScore(finalScore);
     setSubmitted(true);
     
-    toast.success(`Assessment completed! Your score: ${finalScore}%`);
+    toast.success(`Tes selesai! Skor Anda: ${finalScore}%`);
   };
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 p-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-lg">Generating questions...</p>
+        <p className="text-lg">Sedang membuat pertanyaan...</p>
       </div>
     );
   }
@@ -172,11 +211,11 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Reading Comprehension Assessment</h2>
+        <h2 className="text-2xl font-bold">Tes Pemahaman Bacaan</h2>
         {submitted && (
           <div className="flex items-center gap-2 text-lg font-semibold">
             <Award className="text-yellow-500 h-6 w-6" />
-            Score: {score}%
+            Skor: {score}%
           </div>
         )}
       </div>
@@ -186,7 +225,7 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
           <div key={question.id} className="border rounded-lg p-4 bg-background">
             <div className="space-y-4">
               <div className="flex justify-between">
-                <h3 className="text-lg font-medium">Question {question.id}:</h3>
+                <h3 className="text-lg font-medium">Pertanyaan {question.id}:</h3>
                 {submitted && (
                   <div>
                     {answers[question.id] === question.correctAnswer ? (
@@ -241,12 +280,12 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
             onClick={handleSubmit} 
             disabled={Object.keys(answers).length < questions.length}
           >
-            Submit Answers
+            Kirim Jawaban
           </Button>
         ) : (
           <div className="space-x-4">
-            <Button onClick={onRestart}>Start New Reading</Button>
-            <Button onClick={onComplete} variant="outline">Return to Reader</Button>
+            <Button onClick={onRestart}>Mulai Bacaan Baru</Button>
+            <Button onClick={onComplete} variant="outline">Kembali ke Pembaca</Button>
           </div>
         )}
       </div>
