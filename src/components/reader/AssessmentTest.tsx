@@ -2,8 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
 import { Check, X, Award } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,8 +25,6 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
-  
-  const form = useForm();
 
   React.useEffect(() => {
     generateQuestions();
@@ -218,7 +215,7 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
                     }`}
                   >
                     <RadioGroupItem value={index.toString()} id={`q${question.id}-option${index}`} />
-                    <FormLabel 
+                    <Label 
                       htmlFor={`q${question.id}-option${index}`}
                       className={`font-normal ${
                         submitted && index === question.correctAnswer 
@@ -229,7 +226,7 @@ const AssessmentTest: React.FC<AssessmentTestProps> = ({ text, onComplete, onRes
                       }`}
                     >
                       {option}
-                    </FormLabel>
+                    </Label>
                   </div>
                 ))}
               </RadioGroup>
